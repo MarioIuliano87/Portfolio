@@ -1,0 +1,23 @@
+import pandas as pd
+from pandas import ExcelWriter
+
+#Reading dataset
+path = '/Users/iuliano/Documents/projects/data_exploration/listings.csv'
+df = pd.read_csv(path)
+
+#Getting to know the data
+print(df.shape)
+print(df.info())
+print(df.sample(10))
+
+pd.set_option('display.max_columns', None) #To display all columns. Due to the high number of dimension, a sample will be printed into excel
+with ExcelWriter ('/Users/iuliano/Documents/projects/data_exploration/listings_sample.xlsx') as writer:
+    df.sample(10).to_excel(writer, sheet_name = 'listings_sample')
+
+#Missing values
+total = df.isnull().sum().sort_values(ascending=False)
+percentage = (df.isnull().sum()/df.shape[0]).sort_values(ascending= False)
+print(percentage)
+
+### Findings ####
+# 37012 rows / 16 columns
