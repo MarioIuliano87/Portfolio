@@ -1,5 +1,6 @@
 import pandas as pd
 from pandas import ExcelWriter
+import seaborn as sns
 
 #Reading dataset
 path = '/Users/iuliano/Documents/projects/data_exploration/listings.csv'
@@ -9,8 +10,7 @@ df = pd.read_csv(path)
 print(df.shape)
 print(df.info())
 print(df.sample(10))
-
-pd.set_option('display.max_columns', None) #To display all columns. Due to the high number of dimension, a sample will be printed into excel
+pd.set_option('display.max_columns', None) #To display all columns. Due to the high number of dimensions, a sample will be printed into excel
 with ExcelWriter ('/Users/iuliano/Documents/projects/data_exploration/listings_sample.xlsx') as writer:
     df.sample(10).to_excel(writer, sheet_name = 'listings_sample')
 
@@ -19,5 +19,43 @@ total = df.isnull().sum().sort_values(ascending=False)
 percentage = (df.isnull().sum()/df.shape[0]).sort_values(ascending= False)
 print(percentage)
 
-### Findings ####
-# 37012 rows / 16 columns
+### Findings ###
+#Each row uniquely describes 1 listing
+#Total observations: 37012
+#25% of listings have no data related to reviews. This could be due to:
+    #1) Data not recorded
+    #2) Listings haven't received a review yet
+
+    #Because the dimension 'number_of_reviews' has no missing values, we can test if for those listings without 'last_review' and 'review_per_month' the value is 0
+
+#Return number_of_reviews for listings where last_review and reviews_per_month is NaN
+number_of_reviews = df.loc[(df['last_review'].isna()==True)& (df['reviews_per_month'].isna()==True)]
+print(max(number_of_reviews['number_of_reviews']))
+### Findings ###
+#Missing values within the 2 dimensions are due to the fact that listings haven't received review yet.
+#0 Fill NaN with 0
+df['last_review'] = df['last_review'].fillna(0)
+df['reviews_per_month'] = df['reviews_per_month'].fillna(0)
+#Verifying that NaN have been replaced
+print(df['last_review'].isna().sum())
+print(df['reviews_per_month'].isna().sum())
+
+
+#Verfying data quality. Here dimension entries will be stored in a list to check for typos
+def distinct(df_col_name):
+    distinct_entries = []
+    for x in df_col_name:
+        if x not in distinct_entries:
+            distinct_entries.append(x)
+    return distinct_entries
+
+distinct(df['neighbourhood_group'])
+distinct(df['neighbourhood'])
+distinct(df['room_type'])
+
+### Findings ###
+#No typos nor inconsistency in categorical variables
+
+#Explore categorical frequencies
+df['room_type'].value_counts()/df.shape[0]
+sns.barplot()
