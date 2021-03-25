@@ -1,6 +1,9 @@
 import pandas as pd
+import numpy as np
 from pandas import ExcelWriter
 import seaborn as sns
+import matplotlib.pyplot as plt
+
 
 #Reading dataset
 path = '/Users/iuliano/Documents/projects/data_exploration/listings.csv'
@@ -10,9 +13,9 @@ df = pd.read_csv(path)
 print(df.shape)
 print(df.info())
 print(df.sample(10))
-pd.set_option('display.max_columns', None) #To display all columns. Due to the high number of dimensions, a sample will be printed into excel
-with ExcelWriter ('/Users/iuliano/Documents/projects/data_exploration/listings_sample.xlsx') as writer:
-    df.sample(10).to_excel(writer, sheet_name = 'listings_sample')
+# pd.set_option('display.max_columns', None) #To display all columns. Due to the high number of dimensions, a sample will be printed into excel
+# with ExcelWriter ('/Users/iuliano/Documents/projects/data_exploration/listings_sample.xlsx') as writer:
+#     df.sample(10).to_excel(writer, sheet_name = 'listings_sample')
 
 #Missing values
 total = df.isnull().sum().sort_values(ascending=False)
@@ -57,5 +60,28 @@ distinct(df['room_type'])
 #No typos nor inconsistency in categorical variables
 
 #Explore categorical frequencies
-df['room_type'].value_counts()/df.shape[0]
-sns.barplot()
+def freq(df_col_name):
+    x = df_col_name.value_counts(normalize = True)#Returning percentage
+    x.sort_values(ascending=False)
+    plt.title(df_col_name.name +'_frequency')
+    x.plot(kind='bar')
+    # sns.countplot(x=df_col_name, order = df_col_name.value_counts().index)
+freq(df['room_type'])
+freq(df['neighbourhood_group'])
+
+### Findings ###
+#1)Entire Home/Apt and single rooms are more spread than others
+#2)Manhattan and Brookly are the neighbourhoods with the most listings. But why? Due to area availability or because the others are just starting to develop?
+
+#To answer to this question I will compare the distributions of number of reviews for mannhattan and brookly against queens, bronx and staten island
+plt.title('Number of Reviews Per Neighbourhood')
+sns.boxplot(y = df['neighbourhood_group'], x = df['number_of_reviews'])
+
+#statistics function
+def stats(df_col_name):
+    min = df_col_name.min()
+    quartile_25 = np.percentile(df_col_name,25)
+    median = np.percentile(df_col_name,50)
+    average = df_col_name.ean(0)
+    quartile_75 = np.percentile(df_col_name, 75)
+
