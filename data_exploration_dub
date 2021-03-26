@@ -23,10 +23,10 @@ df_listings = df[['id','listing_url','picture_url','host_id', 'neighbourhood',
        'bathrooms_text', 'bedrooms', 'beds', 'amenities', 'price',
        'minimum_nights', 'maximum_nights', 'number_of_reviews','first_review',
        'last_review', 'review_scores_rating']]
-
-#Storing df sample in an excel file to better look at the data shape
-with ExcelWriter('/Users/iuliano/Documents/projects/data_exploration/dub_listings_sample.xlsx') as writer:
-    df_listings.sample(50).to_excel(writer, sheet_name='sample_50')
+#
+# #Storing df sample in an excel file to better look at the data shape
+# with ExcelWriter('/Users/iuliano/Documents/projects/data_exploration/dub_listings_sample.xlsx') as writer:
+#     df_listings.sample(50).to_excel(writer, sheet_name='sample_50')
 
 #NaN analysis
 null_count = df_listings.isnull().sum().sort_values(ascending=False)
@@ -82,5 +82,4 @@ print(b_delta)
 df_listings = df_listings.drop(df_listings.loc[(df_listings['number_of_reviews']!=0)
                                                &(df_listings['review_scores_rating'].isnull()==True)].index,inplace=True)
 
-
-
+df_listings.isnull()
