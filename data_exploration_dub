@@ -1,0 +1,86 @@
+import pandas as pd
+import numpy as np
+from pandas import ExcelWriter
+from datetime import datetime
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+#### Focus on Listings:
+### Price - Characteristics
+
+##############################
+
+#### First step: Observe data quality -- > NaN, remove non-relevant features, data cleaning ####
+
+#Reading dataset
+path = '/Users/iuliano/Documents/projects/data_exploration/dub_listings.csv'
+df = pd.read_csv(path)
+#Analysing columns to select features relevant to the analysis
+print(df.columns)
+df_listings = df[['id','listing_url','picture_url','host_id', 'neighbourhood',
+       'neighbourhood_cleansed', 'neighbourhood_group_cleansed', 'latitude',
+       'longitude', 'property_type', 'room_type', 'accommodates', 'bathrooms',
+       'bathrooms_text', 'bedrooms', 'beds', 'amenities', 'price',
+       'minimum_nights', 'maximum_nights', 'number_of_reviews','first_review',
+       'last_review', 'review_scores_rating']]
+
+#Storing df sample in an excel file to better look at the data shape
+with ExcelWriter('/Users/iuliano/Documents/projects/data_exploration/dub_listings_sample.xlsx') as writer:
+    df_listings.sample(50).to_excel(writer, sheet_name='sample_50')
+
+#NaN analysis
+null_count = df_listings.isnull().sum().sort_values(ascending=False)
+null_percentage = null_count/len(df_listings)
+print(null_percentage)
+
+#Can we simply drop 'bathrooms' and 'neighbourhood_group_cleansed' and assuming that we are not losing information?
+#I assume that the two columns are complementary to bathrooms_text and neighbourhood_x
+df_bathrooms = df_listings[['bathrooms', 'bathrooms_text']]
+df_neighbourhoods = df_listings[['neighbourhood_group_cleansed','neighbourhood','neighbourhood_cleansed']]
+verify_neighbourhoods = df_neighbourhoods[df_neighbourhoods['neighbourhood'].isnull()==False]
+
+#Dropping columns not adding value to the data
+df_listings= df_listings.drop(['bathrooms','neighbourhood_group_cleansed','neighbourhood'], axis=1)
+# @ type(null_percentage)
+#Looking at the remainining columns with null values
+plt.title('Missing Values Frequency')
+null_percentage[null_percentage!=0].plot(kind='bar')
+
+#Reviews Analysis#
+#Why are there missing values for review_score, firt/last_review?
+#There are no missing values for number_of_reviews
+reviews_an = df_listings[['number_of_reviews','first_review','last_review','review_scores_rating']]
+a=reviews_an[reviews_an['review_scores_rating'].isnull()==True]
+print(len(a))#1569
+print(len(a[a['number_of_reviews']==0]))
+#1427 listings haven't received reviews so far. For these listings first_review and last_review are also nan which makes sense considering that they have no reviews
+#This means that there are 169 listings which received reviwes but did not record the rating. Why?
+#I will check the latest review within the dataset. The hypothesis is that those listings without rating but with review scores haven't generated a rating yet
+b = a[a['number_of_reviews']!=0]
+#Dates are stored as obj and will need to be converted into datetime
+print(b.info())
+b['first_review'] = pd.to_datetime(b['first_review'])
+b['last_review'] = pd.to_datetime(df['last_review'])
+print(b.info())
+b['delta'] = b['last_review']-b['first_review']
+b['delta'] = b['delta'].dt.days
+print(b['delta'].describe())
+b_delta = []
+for x in b['delta']:
+    if x not in b_delta:
+        b_delta.append(x)
+b_delta.sort()
+print(b_delta)
+#Conclusion: I tried to prove that those listings with few reviews and no score haven't received a score yet due to db refreshing. But it is not the case.Interesting would be to know how the score is calculated
+#Solution:
+# For review_score NaN where number_of_reviews = 0, no changes will be applied
+# For those where score is NaN and number of reviews != 0 will be dropped as I can't identify any criteria to impute the missing value.
+ #Moreover, dropping those listings won't have a significant impact on the data as it represents only the 2% of the data
+
+
+#Remove rows where number of reviews != 0 and review_score is NaN
+df_listings = df_listings.drop(df_listings.loc[(df_listings['number_of_reviews']!=0)
+                                               &(df_listings['review_scores_rating'].isnull()==True)].index,inplace=True)
+
+
+
