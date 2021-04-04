@@ -1,0 +1,76 @@
+import pandas as pd
+
+path = '/Users/iuliano/Downloads/GSAF5.csv'
+df = pd.read_csv(path, sep = ',', encoding='cp1252')
+
+#Let's have a look at the dataset quality by checking missing values
+df.isnull().sum().sort_values(ascending= False)/len(df)#NULL by column
+df.isnull().values.sum()/(df.shape[1]*df.shape[0])#Total NULLS
+
+#Investigating features that I would drop due to high level of nulls
+df['Unnamed: 22'].unique()
+df['Unnamed: 23'].unique()
+#No valuable data --> dropping columns
+df.drop(['Unnamed: 22','Unnamed: 23'], axis = 1,inplace= True)
+
+#Realising some blank spaces at the end of columsn
+df.columns = df.columns.str.strip()
+
+###
+#HREF can be kept and replace the NULLS with 'Not Avalilable'
+#HREF formula seems to contain the same info of HREF --> DROP
+#Investigator doesn't represent important data for this puprose --> drop
+#Location provides a detailed attack location, unfortunately no coordinates or further data is provided to retrive the exact location where NULL. --> Will replace with area and 'not recorded'
+#Country with NULLS will be dropped as they represent the 0.7 % of the entire data --> Drop
+#Original Order --> drop
+#Case number 1-2 will be dropped because I don;t have understanding of the columns --> dropp
+#Name will be dropped as doens't add value to the analysis -- > Drop
+
+#Removing irrelevant columns
+df.drop(['Name','Investigator or Source',
+         'href formula','original order',
+         'Case Number.2','Case Number.1'],axis = 1 , inplace=True)
+
+#Let's deal with the missing values
+#TIME: 50% missing. Is there a way to retrieve the time?
+type(df['Time'][1])
+df['Time'].unique()
+df['Date'].unique()
+#We discover that it stored as a string and contains a mix of string hours and string part of the day (e.g. 'Afternoon').
+#Date doesn't provide a timestamp
+#Conclusion: I will replace the NAN as 'not recorded'
+def not_recorded(df_col_name):
+    df_col_name=df_col_name.fillna('Not Recorded', inplace = True)
+
+not_recorded(df['Time'])
+not_recorded(df['Species'])
+not_recorded(df['Age'])
+not_recorded(df['Sex'])
+not_recorded(df['Activity'])
+#Species,Age,Sex,Activity: I will apply the same logic
+#Country -> Area -> Location is the hierarchy. For now I will fillna with info of the mutual column and focus on cleaning country
+df['Area'] = df['Area'].fillna(df['Location'])
+df['Location'] = df['Location'].fillna(df['Area'])
+not_recorded(df['Location'])
+not_recorded(df['Area'])
+
+#dropping nan for country
+df.dropna(subset=['Country'], inplace=True)
+
+#filling fatal outcome with injury data when fatal is NAN
+df['Fatal (Y/N)'] = df['Fatal (Y/N)'].fillna(df['Injury'])
+
+#filling 3 rows of href with pdf when href null
+df['href'] = df['href'].fillna(df['pdf'])
+
+#We are left with 25 rows where Injury is NA For these records the fatat outcome remains uknown. Due to the small amount of rows, I will drop the data.
+df.dropna(subset = ['Injury'],inplace = True)
+#No more NaN
+
+
+#### Cleaning the Strings ####
+#docu = https://towardsdatascience.com/cleaning-text-data-with-python-b69b47b97b76
+
+def clean_text(df_col_name):
+    df_col_name = df_col_name.str.strip()
+    df_col_name = df_col_name.str.lower()
