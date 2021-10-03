@@ -7,5 +7,3 @@ The idea is pretty simple: I need a 2 dimensional dataframe with a date and some
 
 In the function it is necessary to 
 An example output: 
-
-
