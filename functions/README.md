@@ -7,10 +7,10 @@ The idea is pretty simple: I need a 2 dimensional dataframe with a date and some
 
 The function takes 4 parameters: 
     len_days: len of the df\
-    int1: minimum integer from which random int will be generated
-    int2: maximum integer until which random int will be generated
+    int1: minimum integer from which random int will be generated\
+    int2: maximum integer until which random int will be generated\
     int1 and int2 define the range of integers from which random numbers will
-    generated
+    generated\
     last_date: the date from which len_days days will be created. Defaults to current date
   
 The only required parameter is len_days. The remaining parameters will default to given values if not defined by the user.
