@@ -2,15 +2,15 @@
 
 ## Introduction ## 
 
-This is my first project portfolio and it aims to gather and store data analytics and data science projects, not only to showcase my skills but also to be exposed to entire online community and exchange ideas, feedback and prespectives. 
+This is my first project portfolio and it aims to gather and store data analytics and data science projects, not only to showcase my skills but also to be exposed to the entire online community and exchange ideas, feedback and learn from other users.
 
 I planned to publish 3 main projects: 
 
-- EDA 
+- Exploratory Data Analysis (EDA) 
 - Linear Regression Modelling 
 - Classification Modelling 
 
-The current status of my portfolio is work-in-progress. I am currently working on the EDA topic which I'm planning to post in the next few weeks. 
+**The current status of my portfolio is work-in-progress**. I am currently working on the EDA topic which I'm planning to post in the next few weeks. 
 
 ## Who is Mario Iuliano? ## 
 
