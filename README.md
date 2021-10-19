@@ -4,7 +4,7 @@
 
 This is my first project portfolio and it aims to gather and store data analytics and data science projects, not only to showcase my skills but also to be exposed to the entire online community and exchange ideas, feedback and learn from other users.
 
-I planned to publish 3 main projects: 
+I planned to publish 4 main projects: 
 
 - Exploratory Data Analysis (EDA)
 - Connect to an API and pull data  
