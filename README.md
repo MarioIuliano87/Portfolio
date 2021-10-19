@@ -6,10 +6,10 @@ This is my first project portfolio and it aims to gather and store data analytic
 
 I planned to publish 4 main projects: 
 
-- Exploratory Data Analysis (EDA)
-- Connect to an API and pull data  
-- Linear Regression Modelling 
-- Classification Modelling 
+- Exploratory Data Analysis (EDA) - WIP
+- Connect to an API and pull data  - WIP
+- Linear Regression Modelling - Not started
+- Classification Modelling - Not Started
 
 **The current status of my portfolio is work-in-progress**. I am currently working on the EDA topic which I'm planning to post in the next few weeks. 
 
