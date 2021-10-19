@@ -6,7 +6,8 @@ This is my first project portfolio and it aims to gather and store data analytic
 
 I planned to publish 3 main projects: 
 
-- Exploratory Data Analysis (EDA) 
+- Exploratory Data Analysis (EDA)
+- Connect to an API and pull data  
 - Linear Regression Modelling 
 - Classification Modelling 
 
