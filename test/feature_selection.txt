@@ -1,0 +1,58 @@
+🔍 Feature Selection with Linear & Logistic Regression
+✅ 1. Both Models Provide Coefficients
+Linear Regression: Coefficients show how much the predicted value changes with a 1-unit change in a feature.
+
+Logistic Regression: Coefficients show how much the log-odds of a binary outcome change with a 1-unit increase in a feature.
+
+📊 Why Use Coefficients for Feature Selection?
+Coefficients help identify:
+
+Which features most strongly affect the target
+
+The direction of the effect (positive or negative)
+
+The relative importance, when features are standardized
+
+📐 Importance of Standardization
+Before interpreting coefficients, standardize your features (mean = 0, std = 1):
+
+Ensures comparability across features
+
+Prevents misleading importance due to scale differences
+
+python
+Copy
+from sklearn.preprocessing import StandardScaler
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+🧪 Examples
+➤ Linear Regression (continuous target)
+python
+Copy
+from sklearn.linear_model import LinearRegression
+model = LinearRegression().fit(X_scaled, y)
+Feature	Coefficient	Interpretation
+age	+0.5	1 SD increase in age → prediction ↑ 0.5
+income	-0.3	1 SD increase in income → prediction ↓ 0.3
+
+➤ Logistic Regression (binary target)
+python
+Copy
+from sklearn.linear_model import LogisticRegression
+model = LogisticRegression().fit(X_scaled, y)
+Feature	Coefficient	Odds Ratio	Interpretation
+days_since_login	+0.89	2.44	1 SD ↑ → odds of churn increase by 144%
+logins_last_30_days	-0.38	0.69	1 SD ↑ → odds of churn decrease by 31%
+
+Odds Ratio
+=
+𝑒
+Coefficient
+Odds Ratio=e 
+Coefficient
+ 
+📌 When to Use This Approach
+✅ For interpretable models
+✅ When you want to explain which features matter and why
+✅ For quick feature selection in early modeling stages
+
