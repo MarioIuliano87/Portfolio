@@ -1,60 +1,19 @@
-name: Delete Branch Rule
+name: Cleanup stale branches
 
 on:
   schedule:
-    - cron: "0 2 * * 0"
+    - cron: "0 3 * * 0"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  delete-stale-branches:
+  cleanup:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
-      - name: Delete branches inactive for 30+ days
-        uses: actions/github-script@v7
+      - name: Cleanup stale branches
+        uses: Balvajs/delete-stale-branches@v2.1.1
         with:
-          script: |
-            const msPerDay = 24 * 60 * 60 * 1000;
-            const cutoffMs = 30 * msPerDay;
-            const now = Date.now();
-
-            const { owner, repo } = context.repo;
-            const repoInfo = await github.rest.repos.get({ owner, repo });
-            const defaultBranch = repoInfo.data.default_branch;
-
-            const branches = await github.paginate(
-              github.rest.repos.listBranches,
-              { owner, repo, per_page: 100 }
-            );
-
-            const staleBranches = [];
-
-            for (const branch of branches) {
-              if (branch.name === defaultBranch) continue;
-              if (branch.protected) continue;
-
-              const commit = await github.rest.repos.getCommit({
-                owner,
-                repo,
-                ref: branch.commit.sha
-              });
-
-              const commitDate = new Date(commit.data.commit.committer.date).getTime();
-              const ageMs = now - commitDate;
-
-              if (ageMs > cutoffMs) {
-                staleBranches.push(branch.name);
-              }
-            }
-
-            for (const branchName of staleBranches) {
-              await github.rest.git.deleteRef({
-                owner,
-                repo,
-                ref: `heads/${branchName}`
-              });
-              core.info(`Deleted stale branch: ${branchName}`);
-            }
-
-            core.info(`Deleted ${staleBranches.length} stale branch(es).`);
+          days-to-delete: 90
+          dry-run: true
