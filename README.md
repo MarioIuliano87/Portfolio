@@ -7,3 +7,14 @@ Driving tangible business impact is my main motivator. I focus on work that move
 This repository is a curated showcase of projects I’ve worked on spanning experimentation, predictive modeling, NLP, and AI applications as well as areas I actively explore and refine.
 
 It reflects how I think about data: pragmatic, product-driven, and built for real-world usage.
+
+## Reproducibility
+
+To reproduce the project environment, first install `uv`, then run:
+
+```bash
+uv sync
+source .venv/bin/activate
+```
+
+This creates a `.venv` virtual environment and installs the dependencies defined in `pyproject.toml` (resolved via `uv.lock`).
