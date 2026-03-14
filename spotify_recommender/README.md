@@ -1,178 +1,355 @@
-# Spotify “On-the-Go” Next Song Recommender (MVP)
-
-## What it does
-A Streamlit app that generates **real-time “next song” recommendations** based on the track you’re listening to right now (or a track you type in). It builds an **adaptive playlist on the fly** and re-ranks recommendations when you **skip** tracks or **listen through** (e.g., ≥80% completion).
+# 🎧 Instant Seed → Creative Playlist  
+## MVP Specification
 
 ---
 
-## Problem it solves
-When you’re in a listening flow, you don’t want to curate playlists manually. You want the next track to:
-- match the current vibe (energy / tempo / loudness / etc.),
-- stay inside *your* taste space (your liked songs & playlists),
-- adapt quickly if you skip.
+## 1. Overview
 
-**Outcome:** auto-generated playlists “on the go” that improve from implicit feedback.
+This project builds a **session-aware music recommender** that:
 
----
+1. Takes a single seed track  
+2. Instantly generates a Top 10 playlist  
+3. Maintains high similarity for the first few tracks (exploit phase)  
+4. Gradually injects controlled creativity (explore phase)  
+5. Adapts based on implicit feedback (skip vs listen-through)
 
-## MVP Scope
-### Inputs
-- **Mode A (Search):** user types a song title
-- **Mode B (Now Playing):** app reads the current Spotify track
-
-### Outputs
-- Top 10 ranked next-track recommendations (with similarity score)
-- “Session playlist” list that evolves as you listen/skip
-
-### Core signal
-Spotify **audio features** as track vectors:
-`danceability, energy, valence, tempo, loudness, acousticness, instrumentalness, liveness, speechiness`
+The goal is to demonstrate:
+- Vector-based retrieval
+- Exploration vs exploitation
+- Session modeling
+- Clean product thinking
+- Reproducible architecture
 
 ---
 
-## Feasibility & Constraints (important for portfolio credibility)
+## 2. Problem It Solves
 
-### ✅ Streamlit “type a song → recommendations”
-Feasible. You can resolve a title to a track via Search, then fetch audio features, then do similarity search in your local corpus.
+When starting from one song, users want:
 
-### ✅ “Now playing” integration
-Feasible. Spotify provides an endpoint to read the **currently playing track** for the user.  [oai_citation:0‡Spotify for Developers](https://developer.spotify.com/documentation/web-api/reference/get-the-users-currently-playing-track?utm_source=chatgpt.com)  
-Requires user authorization scopes such as `user-read-currently-playing` and/or `user-read-playback-state`.  [oai_citation:1‡Spotify for Developers](https://developer.spotify.com/documentation/web-api/concepts/scopes?utm_source=chatgpt.com)
+- Immediate continuation of the vibe  
+- Gradual variation to avoid boredom  
+- Smooth listening flow  
+- Adaptation when they skip  
 
-### ✅ Detect skipping + re-rank with “listen ≥80%” rule
-Feasible, but done via **polling**, not events/webhooks.
-Spotify does not push skip events to your app; instead, you periodically call the “currently playing” endpoint and infer:
-- **skip:** track changes before completion threshold
-- **good listen:** `progress_ms / duration_ms >= 0.80` (computed client-side)
-
-### ⚠️ Rate limits
-Spotify enforces Web API rate limits. If you hit them you’ll receive HTTP 429 responses, and you should back off accordingly.  [oai_citation:2‡Spotify for Developers](https://developer.spotify.com/documentation/web-api/concepts/rate-limits?utm_source=chatgpt.com)  
-For the MVP, polling every ~5–10 seconds is typically enough to detect track changes without being aggressive.
-
-### ⚠️ “Running in Spotify” vs “controlling Spotify”
-- Reading playback state (what’s playing) is doable (above).
-- Controlling playback (e.g., “skip next”, “add to queue”) is also possible via Player APIs, **but some endpoints only work for Spotify Premium** users (e.g., “Skip To Next”).  [oai_citation:3‡Spotify for Developers](https://developer.spotify.com/documentation/web-api/reference/skip-users-playback-to-next-track?utm_source=chatgpt.com)  
-For a portfolio MVP, you can keep it as **read-only + recommend** and optionally add playback control later behind a “Premium required” note.
-
-### ✅ Overall feasibility verdict
-**Yes, this is a strong and realistic portfolio project.**
-It demonstrates:
-- API integration + OAuth scopes
-- building a personal dataset
-- vector similarity retrieval
-- online adaptation from implicit feedback
-- product thinking (constraints, fallbacks, explainability)
+This system creates playlists **on the fly**, balancing coherence and novelty.
 
 ---
 
-## System Design (MVP)
+## 3. Track Representation
 
-### Data layer (local corpus)
-Build a local store from:
-- Liked songs (`/me/tracks`)
-- User playlists + playlist tracks
+Each track is represented as a numeric vector using Spotify audio features:
 
-For each track store:
-- Track metadata: id, name, artists, album, release_date, duration_ms, popularity
-- Audio features: the vector fields above
+    V = [
+      danceability,
+      energy,
+      valence,
+      tempo,
+      loudness,
+      acousticness,
+      instrumentalness,
+      liveness,
+      speechiness
+    ]
 
-### Retrieval
-1. Get query track (typed OR currently playing).
-2. Fetch its audio features vector `v`.
-3. Retrieve candidates from local corpus (optionally filter out same artist / recent history).
-4. Rank by similarity (cosine) on standardized features.
-5. Return Top 10.
-
-### Adaptive session (“on-the-go playlist”)
-Maintain a session vector `S`.
-
-- Initialize: `S = v(track_1)`
-- If user listens ≥80%: update towards the track:
-  - `S = 0.7*S + 0.3*v(track_k)`
-- If user skips early: update weakly or apply penalties:
-  - `S = 0.95*S + 0.05*v(track_k)` (or keep S unchanged + blacklist neighborhood)
-
-Then recommend from `S` rather than only the current track.
+Before similarity comparison, features are standardized using z-score normalization.
 
 ---
 
-## Step-by-step project plan
+## 4. Similarity Function
 
-### Phase 0 — Setup (1–2 hours)
-1. Create Spotify Developer App (Client ID, Redirect URI).
-2. Implement OAuth Authorization Code flow (scopes below).
-3. Create a `.env` and ensure secrets are not committed.
+Cosine similarity is used:
 
-**Scopes to request (MVP)**
-- Read playback: `user-read-currently-playing`, `user-read-playback-state`  [oai_citation:4‡Spotify for Developers](https://developer.spotify.com/documentation/web-api/concepts/scopes?utm_source=chatgpt.com)
-- Read library: `user-library-read`
-- Read playlists: `playlist-read-private`, `playlist-read-collaborative`
-
-### Phase 1 — Data ingestion (half day)
-4. Download your liked songs + playlists track lists.
-5. Batch-fetch audio features for all track IDs.
-6. Store locally (SQLite or Parquet).
-
-Deliverable: `data/tracks.parquet` (or `spotify.db`)
-
-### Phase 2 — Retrieval baseline (half day)
-7. Feature preprocessing:
-   - handle missing values
-   - standardize numeric features
-8. Implement similarity search:
-   - cosine similarity
-   - filters: exclude current track, optionally exclude same artist
-9. Write unit tests for:
-   - vector shapes
-   - ranking stability
-   - filters
-
-Deliverable: `src/recommend.py`
-
-### Phase 3 — Streamlit app (half day)
-10. Build Streamlit UI with two modes:
-   - “Search by title”
-   - “Now Playing”
-11. Display Top 10 recommendations with:
-   - song + artist
-   - similarity score
-   - optionally “feature match” explanation (top contributing dimensions)
-
-Deliverable: `app.py`
-
-### Phase 4 — Adaptive behavior (1 day)
-12. Implement polling loop:
-   - call currently-playing endpoint every ~5–10 seconds
-   - track changes → infer skip vs completion
-13. Implement session vector update rules
-14. Re-rank recommendations after each inferred event
-15. Add simple “history” state (avoid repeats)
-
-Deliverable: adaptive playlist behavior + “session timeline” debug panel
-
-### Phase 5 — Portfolio polish (half day)
-16. Write a short “Product & Engineering” section in README:
-   - assumptions & constraints
-   - rate limits/backoff strategy  [oai_citation:5‡Spotify for Developers](https://developer.spotify.com/documentation/web-api/concepts/rate-limits?utm_source=chatgpt.com)
-   - Premium-only playback control note  [oai_citation:6‡Spotify for Developers](https://developer.spotify.com/documentation/web-api/reference/skip-users-playback-to-next-track?utm_source=chatgpt.com)
-17. Add screenshots / demo GIF
-18. Add “How to run” + “Troubleshooting” (OAuth redirect, scopes, no device active, etc.)
+    sim(u, v) = (u · v) / (||u|| * ||v||)
 
 ---
 
-## Stretch ideas (optional)
-- Diversity constraint (avoid too-similar sequence)
-- Hybrid score: audio similarity + artist-genre similarity
-- Add-to-queue button (with Premium note)
-- Export session playlist to a new Spotify playlist
+## 5. Session Vector
+
+We maintain a session vector `S`.
+
+### Initialization
+
+    S = vector(seed_track)
+
+### Update Rule
+
+If listened ≥ 80%:
+
+    S = 0.7 * S + 0.3 * v_track
+
+If skipped early (< 20%):
+
+    S = 0.95 * S + 0.05 * v_track
+
+Otherwise:
+
+    S remains unchanged
 
 ---
 
-## Repo structure suggestion
-- `app.py` (Streamlit)
-- `src/spotify_client.py` (API wrapper + OAuth)
-- `src/data_ingest.py` (download + persist)
-- `src/recommend.py` (vector prep + retrieval + session logic)
-- `data/` (local store; gitignored)
-- `tests/`
-- `.env.example`
+## 6. Exploit Phase (First 5 Tracks)
+
+- Rank candidates by cosine similarity to `S`
+- Exclude:
+  - Current track
+  - Optionally same artist
+  - Recently played tracks
+
+Scoring:
+
+    score_exploit = sim(S, v_track)
+
+Return Top 10.
+
+---
+
+## 7. Explore Phase (Controlled Creativity)
+
+After 5 tracks, inject novelty.
+
+### Method A — Distance Band
+
+Compute Euclidean distance:
+
+    d = ||v_track - S||
+
+Select tracks whose distance lies between:
+
+- 70th percentile  
+- 85th percentile  
+
+Rank with hybrid score:
+
+    score_creative = 0.5 * sim(S, v) + 0.5 * novelty(v)
+
+Where novelty penalizes:
+- Same artist
+- Same cluster
+- Recently played
+
+---
+
+### Method B — Temperature Sampling
+
+Convert similarities into probabilities:
+
+    p_i ∝ exp(sim(S, v_i) / T)
+
+- Small T (0.1) → exploit  
+- Larger T (0.7) → explore  
+
+After track 5, increase T.
+
+---
+
+## 8. Creativity Schedule (MVP Defaults)
+
+    seed_batch_size = 10
+    creativity_start_after = 5
+    exploit_count = 8
+    creative_count = 2
+
+Behavior:
+- First 5 tracks → 100% exploit
+- After → 80% exploit, 20% creative
+
+---
+
+## 9. Data Modes
+
+### Demo Mode (No Login Required)
+
+- Uses bundled dataset (2–5k tracks)
+- Fully reproducible
+- Works offline
+
+### Personal Mode (Spotify OAuth)
+
+Required scopes:
+- user-library-read
+- playlist-read-private
+- playlist-read-collaborative
+- user-read-currently-playing
+- user-read-playback-state
+
+Premium is NOT required unless controlling playback.
+
+---
+
+## 10. Optional API Layer
+
+### POST /playlist/generate
+
+Request:
+
+    {
+      "seed_track_id": "...",
+      "top_k": 10,
+      "exclude_same_artist": true,
+      "creativity_start_after": 5,
+      "creative_ratio": 0.2
+    }
+
+Response:
+
+    {
+      "playlist": [
+        {"track_id": "...", "score": 0.93, "type": "exploit"},
+        {"track_id": "...", "score": 0.88, "type": "exploit"},
+        {"track_id": "...", "score": 0.41, "type": "creative"}
+      ]
+    }
+
+---
+
+## 11. Streamlit Demo Plan
+
+Left panel:
+- Seed track search
+- Toggle: Demo mode / Personal mode
+- Toggle: Creativity level
+- Button: Generate playlist
+
+Right panel:
+- Top 10 list with exploit/creative labels
+- 2D visualization (UMAP)
+  - Blue = exploit
+  - Orange = creative
+  - Black = seed
+
+Simulation buttons:
+- Mark as listened (≥80%)
+- Skip (<20%)
+
+---
+
+## 12. 2D Visualization (Optional)
+
+Use UMAP:
+
+    X_2D = UMAP(n_components=2).fit_transform(X_standardized)
+
+This visually demonstrates:
+- Coherent cluster formation
+- Creative picks being farther but not random
+
+---
+
+## 13. Evaluation Metrics
+
+- Mean cosine similarity of playlist
+- Average creative distance
+- Simulated skip rate
+- Artist diversity (entropy)
+
+---
+
+## 14. Tech Stack
+
+- Python 3.10+
+- numpy
+- pandas
+- scikit-learn
+- umap-learn
+- spotipy
+- streamlit
+- optional: fastapi
+
+---
+
+## 15. Portfolio Value
+
+This project demonstrates:
+
+- Vector retrieval
+- Session-aware reranking
+- Controlled exploration
+- Adaptive feedback loop
+- Reproducible demo mode
+- Product-oriented ML thinking
+
+---
+
+## 16. Summary
+
+This MVP:
+
+- Starts from one track  
+- Builds an immediate coherent playlist  
+- Gradually injects novelty  
+- Adapts to user behavior  
+- Is reproducible without login  
+- Can scale to personal real-time sessions  
+
+It is simple, explainable, and strong as a portfolio data product.
+
+---
+
+## 17. Workflow Diagram
+
+The workflow is easiest to read in three connected layers:
+- State: seed track, feature vector, session vector, candidate pool
+- Ranking: score candidates, split into exploit and explore paths, build the next queue
+- Feedback: listen/skip behavior updates the next session vector
+
+```text
+  [Seed Track]
+       |
+       v
+  [Extract / Load Audio Feature Vector]
+       |
+       v
+  [Initialize Session Vector S]
+       |
+       v
+  [Retrieve Candidate Tracks]
+       |
+       v
+  [Score Candidates vs Session Vector]
+       |
+       +-----------------------------+
+       |                             |
+       v                             v
+  [Exploit Path]                [Explore Path]
+  High similarity to S          Creative selection
+  Nearest neighbors             Distance band or temperature
+       |                             |
+       +-------------+---------------+
+                     |
+                     v
+          [Build Next Queue / Playlist]
+                     |
+                     v
+            [User listens or skips]
+                     |
+                     v
+          [Update Session Vector S]
+                     |
+                     v
+              [Repeat next cycle]
+
+```
+  ## Session Update Logic
+```
+  [User listens or skips]
+           |
+           v
+  [Did user listen >= 80%?] ---- yes ----> [Strong update: S = 0.7S + 0.3v]
+           |
+           no
+           v
+  [Did user skip < 20%?] ------ yes ----> [Weak update: S = 0.95S + 0.05v]
+           |
+           no
+           v
+                 [No update]
+```
+  ## Explore Logic
+```
+  [Explore Path]
+       |
+       +--> [Method A: Distance Band]
+       |     Select tracks with distance from S in P70-P85
+       |
+       +--> [Method B: Temperature Sampling]
+             Sample from similarity distribution with higher T
